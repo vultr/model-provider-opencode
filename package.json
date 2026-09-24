@@ -1,0 +1,42 @@
+{
+  "name": "@vultr/model-provider-opencode",
+  "version": "0.0.1",
+  "description": "Vultr Inference for OpenCode: the live /v1/models catalog as a model provider",
+  "author": "Matt Harris <mharris@vultr.com>",
+  "maintainers": ["Matt Harris <mharris@vultr.com>"],
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "vultr",
+    "model-provider"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vultr/model-provider-opencode.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@vultr/model-catalog": "git+https://github.com/vultr/model-catalog-typescript.git#v0.0.1"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "1.18.31",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
