@@ -1,5 +1,5 @@
 import type { Hooks } from "@opencode-ai/plugin";
-import { acceptsInput, isChatModel, pricePerMillion, type CatalogModel } from "@vultr/model-catalog";
+import { acceptsInput, isAgentModel, pricePerMillion, type CatalogModel } from "@vultr/model-catalog";
 
 type ModelsHook = NonNullable<NonNullable<Hooks["provider"]>["models"]>;
 export type OpenCodeModel = Awaited<ReturnType<ModelsHook>>[string];
@@ -8,7 +8,7 @@ export const PROVIDER = "vultr";
 export const NPM = "@ai-sdk/openai-compatible";
 
 export function isUsable(model: CatalogModel): boolean {
-  return isChatModel(model) && model.isReady && model.contextWindow !== null;
+  return isAgentModel(model);
 }
 
 // OpenCode offers a model's reasoning efforts as variants. "none" is the off switch.

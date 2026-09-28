@@ -99,11 +99,12 @@ test("a plain text model maps without capabilities it does not have", () => {
   assert.equal("variants" in model, false);
 });
 
-test("only ready chat models with a context window are offered", () => {
+test("only ready chat models with tools and a context window are offered", () => {
   const reranker = document({ id: "rerank", output_modalities: [{ type: "rerank", supported_parameters: {} }] });
   const unready = document({ id: "unready", is_ready: false });
   const blind = document({ id: "no-context", input_modalities: [{ type: "text" }] });
-  const models = [document(), reranker, unready, blind].map(normalizeModel);
-  assert.deepEqual(models.map(isUsable), [true, false, false, false]);
+  const toolless = document({ id: "no-tools", output_modalities: [{ type: "text", supported_parameters: {} }] });
+  const models = [document(), reranker, unready, blind, toolless].map(normalizeModel);
+  assert.deepEqual(models.map(isUsable), [true, false, false, false, false]);
   assert.deepEqual(Object.keys(toOpenCodeModels(models, BASE_URL)), ["glm-5.3"]);
 });
