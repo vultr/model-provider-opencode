@@ -1,9 +1,11 @@
 {
   "name": "@vultr/model-provider-opencode",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Vultr Inference for OpenCode: the live /v1/models catalog as a model provider",
   "author": "Matt Harris <mharris@vultr.com>",
-  "maintainers": ["Matt Harris <mharris@vultr.com>"],
+  "maintainers": [
+    "Matt Harris <mharris@vultr.com>"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
