@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +10,10 @@ import { PROVIDER, toOpenCodeModels } from "./models.ts";
 // OpenCode treats every export of this module as a plugin, so the plugin is the only export.
 const API_KEY_ENV = "VULTR_INFERENCE_API_KEY";
 const BASE_URL_ENV = "VULTR_INFERENCE_BASE_URL";
+
+// Goes in front of the catalog library's own User-Agent. OpenCode loads this source from the package.
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+const USER_AGENT = `vultr-model-provider-opencode/${version}`;
 
 const cachePath = () =>
   join(process.env["XDG_CACHE_HOME"] || join(homedir(), ".cache"), "opencode", "vultr-model-catalog.json");
@@ -27,7 +32,7 @@ export const VultrModelProvider: Plugin = async () => ({
     models: async (provider) => {
       const baseUrl = process.env[BASE_URL_ENV] || DEFAULT_BASE_URL;
       try {
-        const catalog = await loadCatalog({ baseUrl, timeoutMs: 5_000, cachePath: cachePath() });
+        const catalog = await loadCatalog({ baseUrl, userAgent: USER_AGENT, timeoutMs: 5_000, cachePath: cachePath() });
         return toOpenCodeModels(catalog.models, baseUrl);
       } catch {
         // No network and no cache: keep what OpenCode already has.
