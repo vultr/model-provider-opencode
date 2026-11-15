@@ -3,40 +3,18 @@ import { test } from "node:test";
 
 import { normalizeModel, type ModelDocument } from "@vultr/model-catalog";
 
-import { isUsable, toOpenCodeModel, toOpenCodeModels, variants } from "../src/models.ts";
+import {
+  isUsable,
+  toOpenCodeModel,
+  toOpenCodeModels,
+  toOpenCodeV2Model,
+  toOpenCodeV2Models,
+  v2Variants,
+  variants,
+} from "../src/models.ts";
+import { document } from "./fixture.ts";
 
 const BASE_URL = "https://api.vultrinference.com/v1";
-
-function document(overrides: Partial<ModelDocument> = {}): ModelDocument {
-  return {
-    schema_version: "2.4",
-    id: "glm-5.3",
-    name: "GLM 5.3",
-    created: 1_786_979_709,
-    input_modalities: [
-      {
-        type: "text",
-        supported_inputs: { max_context_length: { value: 1_048_576, unit: "token" } },
-        pricing: [
-          { type: "prompt", unit: "token", cost_usd: "0.0000006" },
-          { type: "cached_prompt", unit: "token", cost_usd: "0.0000001" },
-        ],
-      },
-      { type: "image" },
-      { type: "video" },
-    ],
-    output_modalities: [
-      {
-        type: "text",
-        max_length: { value: 131_072, unit: "token" },
-        supported_parameters: { temperature: { type: "range", min: 0, max: 2 }, tools: { type: "boolean" } },
-        pricing: [{ type: "completion", unit: "token", cost_usd: "0.0000022" }],
-      },
-    ],
-    reasoning: { mandatory: false, supported_efforts: ["max", "high", "low"], supports_max_tokens: true },
-    ...overrides,
-  };
-}
 
 test("a catalog model becomes an OpenCode model", () => {
   assert.deepEqual(toOpenCodeModel(normalizeModel(document()), BASE_URL), {
@@ -107,4 +85,56 @@ test("only ready chat models with tools and a context window are offered", () =>
   const models = [document(), reranker, unready, blind, toolless].map(normalizeModel);
   assert.deepEqual(models.map(isUsable), [true, false, false, false, false]);
   assert.deepEqual(Object.keys(toOpenCodeModels(models, BASE_URL)), ["glm-5.3"]);
+});
+
+test("a catalog model becomes an OpenCode 2 model", () => {
+  assert.deepEqual(toOpenCodeV2Model(normalizeModel(document()), BASE_URL), {
+    id: "glm-5.3",
+    modelID: "glm-5.3",
+    providerID: "vultr",
+    name: "GLM 5.3",
+    settings: { provider: "vultr", baseURL: BASE_URL },
+    compatibility: { maxTokensField: "max_tokens" },
+    capabilities: { tools: true, input: ["text", "image", "video"], output: ["text"], temperature: true },
+    variants: [
+      { id: "none", settings: { reasoningEffort: "none" } },
+      { id: "max", settings: { reasoningEffort: "max" } },
+      { id: "high", settings: { reasoningEffort: "high" } },
+      { id: "low", settings: { reasoningEffort: "low" } },
+    ],
+    time: { released: 1_786_979_709_000 },
+    cost: [{ input: 0.6, output: 2.2, cache: { read: 0.1, write: 0 } }],
+    status: "active",
+    enabled: true,
+    limit: { context: 1_048_576, output: 131_072 },
+  });
+});
+
+test("OpenCode 2 variants follow the reasoning block", () => {
+  const of = (reasoning: ModelDocument["reasoning"] & {} | null) => v2Variants(normalizeModel(document({ reasoning })));
+  assert.deepEqual(of(null), []);
+  assert.deepEqual(of({ mandatory: true, supported_efforts: ["high"] }), [{ id: "high", settings: { reasoningEffort: "high" } }]);
+});
+
+test("a plain text model maps to OpenCode 2 without capabilities it does not have", () => {
+  const plain = document({
+    reasoning: null,
+    deprecation_date: "2027-01-01",
+    input_modalities: [{ type: "text", supported_inputs: { max_context_length: { value: 8_192 } } }, { type: "file" }],
+    output_modalities: [{ type: "text", supported_parameters: {} }],
+  });
+  delete plain.created;
+  const model = toOpenCodeV2Model(normalizeModel(plain), BASE_URL);
+  assert.deepEqual(model.capabilities, { tools: false, input: ["text", "pdf"], output: ["text"], temperature: false });
+  assert.deepEqual(model.cost, [{ input: 0, output: 0, cache: { read: 0, write: 0 } }]);
+  assert.deepEqual(model.limit, { context: 8_192, output: 8_192 });
+  assert.deepEqual(model.time, { released: 0 });
+  assert.equal(model.status, "deprecated");
+  assert.deepEqual(model.variants, []);
+});
+
+test("OpenCode 2 is offered the same models as OpenCode 1", () => {
+  const reranker = document({ id: "rerank", output_modalities: [{ type: "rerank", supported_parameters: {} }] });
+  const models = [document(), reranker].map(normalizeModel);
+  assert.deepEqual(toOpenCodeV2Models(models, BASE_URL).map((model) => model.id), ["glm-5.3"]);
 });

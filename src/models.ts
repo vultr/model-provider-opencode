@@ -1,4 +1,5 @@
 import type { Hooks } from "@opencode-ai/plugin";
+import type { Model } from "@opencode/plugin";
 import { acceptsInput, isAgentModel, pricePerMillion, type CatalogModel } from "@vultr/model-catalog";
 
 type ModelsHook = NonNullable<NonNullable<Hooks["provider"]>["models"]>;
@@ -6,6 +7,13 @@ export type OpenCodeModel = Awaited<ReturnType<ModelsHook>>[string];
 
 export const PROVIDER = "vultr";
 export const NPM = "@ai-sdk/openai-compatible";
+
+// OpenCode 2's model record. Its ids and prices are branded, so plain values are cast where they enter.
+export type OpenCodeV2Model = Model.Info;
+type Cost = OpenCodeV2Model["cost"][number];
+type Variant = OpenCodeV2Model["variants"][number];
+const modelId = (id: string) => id as OpenCodeV2Model["id"];
+const usd = (price: number | null | undefined) => (price ?? 0) as Cost["input"];
 
 export function isUsable(model: CatalogModel): boolean {
   return isAgentModel(model);
@@ -61,4 +69,56 @@ export function toOpenCodeModel(model: CatalogModel, baseUrl: string): OpenCodeM
 
 export function toOpenCodeModels(models: CatalogModel[], baseUrl: string): Record<string, OpenCodeModel> {
   return Object.fromEntries(models.filter(isUsable).map((model) => [model.id, toOpenCodeModel(model, baseUrl)]));
+}
+
+// OpenCode 2 names input kinds the way models.dev does: `pdf` for files.
+const V2_INPUTS = [
+  ["text", "text"],
+  ["image", "image"],
+  ["video", "video"],
+  ["audio", "audio"],
+  ["file", "pdf"],
+] as const;
+
+// OpenCode 2 builds no variants for a plugin's models, so the efforts are listed here.
+export function v2Variants(model: CatalogModel): OpenCodeV2Model["variants"] {
+  const levels = variants(model);
+  return Object.entries(levels ?? {}).map(([id, settings]): Variant => ({ id: id as Variant["id"], settings }));
+}
+
+export function toOpenCodeV2Model(model: CatalogModel, baseUrl: string): OpenCodeV2Model {
+  const price = pricePerMillion(model);
+  const contextWindow = model.contextWindow ?? 0;
+  return {
+    id: modelId(model.id),
+    modelID: modelId(model.id),
+    providerID: PROVIDER as OpenCodeV2Model["providerID"],
+    name: model.name,
+    // `provider` names the host to the openai-compatible package, as models.dev does.
+    settings: { provider: PROVIDER, baseURL: baseUrl },
+    // What OpenCode 1 sends through @ai-sdk/openai-compatible; OpenCode 2 would send max_completion_tokens.
+    compatibility: { maxTokensField: "max_tokens" },
+    capabilities: {
+      tools: model.tools,
+      input: V2_INPUTS.filter(([modality]) => acceptsInput(model, modality)).map(([, kind]) => kind),
+      output: ["text"],
+      temperature: model.supportedParameters.includes("temperature"),
+    },
+    variants: v2Variants(model),
+    time: { released: model.created ? model.created * 1000 : 0 },
+    cost: [
+      {
+        input: usd(price.prompt),
+        output: usd(price.completion),
+        cache: { read: usd(price.cachedPrompt), write: usd(price.cacheWrite) },
+      },
+    ],
+    status: model.deprecationDate ? "deprecated" : "active",
+    enabled: true,
+    limit: { context: contextWindow, output: model.maxOutputTokens ?? contextWindow },
+  };
+}
+
+export function toOpenCodeV2Models(models: CatalogModel[], baseUrl: string): OpenCodeV2Model[] {
+  return models.filter(isUsable).map((model) => toOpenCodeV2Model(model, baseUrl));
 }
