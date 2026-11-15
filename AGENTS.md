@@ -31,9 +31,25 @@ Human overview, mapping table and install: `README.md`.
   mandatory.
 - **Extend, do not duplicate.** models.dev defines provider `vultr` with its name, SDK and env var. Keep the id `vultr`; override only the credential env var and the models. On OpenCode 1 an `env` a user set directly on the provider is kept; on OpenCode 2 ours goes first and the env names already there keep working. A second provider would split credentials and confuse the picker
 
+## Validation
+
+Fast (inner loop):
+- `node --test test/<name>.test.ts` - one test file (`test/models.test.ts`
+  takes well under a second). `npm test -- <path>` does not narrow: the
+  script's glob still runs every file
+- `node --test --test-name-pattern "<name>" test/<name>.test.ts` - one test
+- `npm run typecheck` - types only, a couple of seconds
+
+Full (once, before calling a change complete):
+- `npm run typecheck` and `npm test` must pass
+
+Heavy (never in the inner loop; run once at the end in the background):
+- `opencode models vultr --print-logs` from a scratch directory, with
+  OpenCode 1 and with OpenCode 2 (below)
+
 ## Working here
 
-- `npm run typecheck` and `npm test` must pass. Types come from the real
+- Types come from the real
   `@opencode-ai/plugin` (OpenCode 1) and `@opencode/plugin` (OpenCode 2)
   packages, pinned to the versions tested against; derive the model types from
   them, do not redeclare them
