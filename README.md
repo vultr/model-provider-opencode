@@ -6,9 +6,51 @@ One package works on OpenCode 1 (1.18 and newer) and OpenCode 2.
 
 ## Install
 
-OpenCode installs plugins from npm by the name in `opencode.json`. Until
-this package is on a registry, point `plugin` at a local checkout. OpenCode
-loads it in place, so the checkout needs its own `node_modules`:
+Add the package to `plugin` in `opencode.json`. OpenCode installs it from npm
+on the next start:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@vultr/model-provider-opencode"]
+}
+```
+
+OpenCode 2 reads the same `plugin` entry: it moves V1 entries into its own
+`plugins` list. A config written only for OpenCode 2 can use `"plugins"`
+directly; OpenCode 1 ignores that key.
+
+The CLI can add the entry for you:
+
+| | Command | Writes to |
+| --- | --- | --- |
+| OpenCode 1 | `opencode plugin @vultr/model-provider-opencode` | `.opencode/opencode.json` in the project (`-g` for the global config) |
+| OpenCode 2 | `opencode plugin add @vultr/model-provider-opencode` | the global config |
+
+Then set the key and check that the live models are listed:
+
+```bash
+export VULTR_INFERENCE_API_KEY=...
+```
+
+| | List models | Send a prompt |
+| --- | --- | --- |
+| OpenCode 1 | `opencode models vultr` | `opencode run -m vultr/glm-5.3 --variant high "hello"` |
+| OpenCode 2 | `opencode models` | `opencode run -m 'vultr/glm-5.3#high' "hello"` |
+
+Ids such as `vultr/glm-5.3` come from the live catalog.
+
+### Updating
+
+Both versions keep an installed plugin in their cache and do not fetch a
+newer release of it on their own. To pick the version, pin it in the entry,
+for example `"@vultr/model-provider-opencode@0.0.6"`. Changing the pinned
+version installs that release on the next start.
+
+### From a checkout
+
+To run unreleased changes, point `plugin` at a local checkout instead.
+OpenCode loads it in place, so the checkout needs its own `node_modules`:
 
 ```bash
 git clone https://github.com/vultr/model-provider-opencode.git ~/src/vultr/model-provider-opencode
@@ -20,16 +62,6 @@ cd ~/src/vultr/model-provider-opencode && npm install
   "$schema": "https://opencode.ai/config.json",
   "plugin": ["/home/me/src/vultr/model-provider-opencode"]
 }
-```
-
-OpenCode 2 reads the same `plugin` entry: it moves V1 entries into its own
-`plugins` list. A config written only for OpenCode 2 can use `"plugins"`
-directly; OpenCode 1 ignores that key.
-
-```bash
-export VULTR_INFERENCE_API_KEY=...
-opencode models vultr
-opencode run -m vultr/glm-5.3 --variant high "hello"
 ```
 
 An absolute path and a `file://` URL to the directory work on both. A
