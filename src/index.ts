@@ -23,8 +23,17 @@ const cachePath = () =>
 
 const baseUrl = () => process.env[BASE_URL_ENV] || DEFAULT_BASE_URL;
 
-const catalog = (url: string): Promise<Catalog> =>
-  loadCatalog({ baseUrl: url, userAgent: USER_AGENT, timeoutMs: 5_000, cachePath: cachePath() });
+// The catalog asks for no key. One that is set goes with the read, so the list is the one that key gets.
+const catalog = (url: string): Promise<Catalog> => {
+  const key = process.env[API_KEY_ENV];
+  return loadCatalog({
+    baseUrl: url,
+    ...(key ? { apiKey: key } : {}),
+    userAgent: USER_AGENT,
+    timeoutMs: 5_000,
+    cachePath: cachePath(),
+  });
+};
 
 // OpenCode 1 knows the vultr provider from models.dev, with a hand-written model list.
 // This replaces that list with the live catalog.

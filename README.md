@@ -136,7 +136,7 @@ OpenCode 2 limits a request's output to what is left of the context window.
 
 | Variable | Meaning |
 | --- | --- |
-| `VULTR_INFERENCE_API_KEY` | Makes OpenCode enable the `vultr` provider. On OpenCode 2, models.dev's `VULTR_API_KEY` also does |
+| `VULTR_INFERENCE_API_KEY` | Makes OpenCode enable the `vultr` provider. On OpenCode 2, models.dev's `VULTR_API_KEY` also does. Sent with the catalog read when set, so the list is the one that key gets |
 | `VULTR_INFERENCE_BASE_URL` | Overrides `https://api.vultrinference.com/v1` for the catalog and for requests |
 
 ## Development

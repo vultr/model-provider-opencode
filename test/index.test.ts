@@ -24,10 +24,12 @@ let server: Server;
 let status = 200;
 let data: unknown[] = [];
 const agents: (string | undefined)[] = [];
+const keys: (string | undefined)[] = [];
 
 before(async () => {
   server = createServer((req, res) => {
     agents.push(req.headers["user-agent"]);
+    keys.push(req.headers["authorization"]);
     res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ object: "list", data }));
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
@@ -60,6 +62,24 @@ test("the catalog request names the plugin and its version", async () => {
   await hooks.provider?.models?.(...([{ models: {} }, {}] as unknown as Parameters<Models>));
   assert.equal(agents.length, 1);
   assert.ok(agents[0]?.startsWith(`vultr-model-provider-opencode/${version} vultr-model-catalog/`), agents[0]);
+});
+
+// The gateway answers the catalog for the key that asks, so the read carries the key.
+test("the catalog request carries the key when one is set, and none otherwise", async () => {
+  const hooks = await plugin.server({} as PluginInput);
+  const list = () => hooks.provider?.models?.(...([{ models: {} }, {}] as unknown as Parameters<Models>));
+  const saved = process.env["VULTR_INFERENCE_API_KEY"];
+  try {
+    delete process.env["VULTR_INFERENCE_API_KEY"];
+    keys.length = 0;
+    await list();
+    process.env["VULTR_INFERENCE_API_KEY"] = "test-key";
+    await list();
+    assert.deepEqual(keys, [undefined, "Bearer test-key"]);
+  } finally {
+    if (saved === undefined) delete process.env["VULTR_INFERENCE_API_KEY"];
+    else process.env["VULTR_INFERENCE_API_KEY"] = saved;
+  }
 });
 
 // Records the transforms setup() registers and replays them against small fake editors, as OpenCode 2 does.
